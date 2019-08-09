@@ -21,6 +21,7 @@ type Issue struct {
   Summary            string             `json:"summary"`
   Description        string             `json:"description"`
   ImpactedArtifacts  ImpactedArtifacts  `json:"impacted_artifacts"`
+  CVE                string             `json:"cve"`
 }
 
 type Issues []Issue
