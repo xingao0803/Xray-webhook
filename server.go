@@ -2,10 +2,15 @@ package main
 
 import (
     "fmt"
+    "strconv"
     "net/http"
     "io/ioutil"
     "encoding/json"
+    jira "github.com/andygrunwald/go-jira"
 )
+
+const jira_user = "xxxx"
+const jira_pass = "xxxxxx"
 
 type Violation struct {
   Created            string    `json:"created"`
@@ -52,6 +57,12 @@ PackageType    string    `json:"pkg_type"`
 
 type InfectedFiles []InfectedFile
 
+func getIssuesCount(violation Violation) int {
+    
+    return len(violation.Issues)
+
+}
+
 
 func handler(writer http.ResponseWriter, request *http.Request) {
     var violation Violation
@@ -69,8 +80,46 @@ func handler(writer http.ResponseWriter, request *http.Request) {
         return
     }
 
-    fmt.Printf("Get Violation:")
-    fmt.Printf("%+v", violation)
+    fmt.Printf("Get Violation:\n")
+    fmt.Printf("%+v\n", violation)
+
+    tp := jira.BasicAuthTransport{
+        Username: jira_user,
+        Password: jira_pass,
+    }
+
+    jiraClient, err := jira.NewClient(tp.Client(), "http://jira.xxxxxx.com:8081")
+    if err != nil {
+        fmt.Printf("Can not create Jira Client, %v\n", err)
+        return
+    }
+    fmt.Printf("Created Jira Client!\n")
+
+    i := jira.Issue{
+        Fields: &jira.IssueFields{
+            Assignee: &jira.User{
+                Name: jira_user,
+            },
+            Reporter: &jira.User{
+                Name: jira_user,
+            },
+            Description: "The watch \"" + violation.WatchName + "\" with policy \"" + violation.PolicyName + "\" created a violation with " + strconv.Itoa(getIssuesCount(violation)) + " number of issues",
+            Type: jira.IssueType{
+                Name: "Bug",
+            },
+            Project: jira.Project{
+                Key: "XRAYW",
+            },
+            Summary: "Violation was found with \"" + violation.TopSeverity + "\" severity",
+        },
+    }
+
+    issue, _, err := jiraClient.Issue.Create(&i)
+    if err != nil {
+        fmt.Printf("Can not create Jira Issue, %v\n", err)
+        return
+    }
+    fmt.Printf("Created Jira Issue: %s\n", issue.Key)
 
 }
 
